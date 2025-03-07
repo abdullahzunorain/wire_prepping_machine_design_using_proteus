@@ -78,5 +78,5 @@ This project is licensed under the **MIT License**.
 
 ---
 ### **Author:** Abdullah Zunorain
-For inquiries, contact: [abdullahzunorain2@gmail.com]
+For inquiries, contact: abdullahzunorain2@gmail.com
 
