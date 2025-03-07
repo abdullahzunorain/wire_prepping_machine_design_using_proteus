@@ -1,0 +1,411 @@
+// #include <Servo.h>
+// #include <ezButton.h>
+
+// // Define pins for peripherals
+// #define LIMIT_SWITCH_PIN 5   // Limit switch to detect wire runout
+// #define IR_SENSOR_PIN 9      // IR sensor for rotation count
+// #define DC_MOTOR_IN1 7       // DC motor IN1
+// #define DC_MOTOR_IN2 6       // DC motor IN2
+// #define DC_MOTOR_ENA 4       // DC motor enable (PWM control)
+// #define SERVO_SHEATH 3       // Servo for sheathing removal
+// #define SERVO_SOLDER 2       // Servo for soldering
+// #define SERVO_CUTTER 8      // New Servo for wire cutting
+// #define ERROR_LED 0          // LED for error indication
+// // #define ERROR_CONTACT_PIN 10  // Dry contact for error state
+
+// // Create Servo objects
+// Servo servoSheath;
+// Servo servoSolder;
+// Servo servoCutter; // New servo for wire cutting
+
+// // Create ezButton object for limit switch
+// ezButton limitSwitch(LIMIT_SWITCH_PIN);
+
+// // Variables for system state
+// volatile int rotationCount = 0;  // Count rotations detected by the IR sensor
+// bool wirePresent = false;        // Wire presence detected by limit switch
+// bool errorFlag = false;          // Error state
+// bool taskRunning = false;        // Task in progress
+
+// // Configurable parameters
+// int wireLength = 10;  // Default wire length in cm (can be modified via web portal)
+// int sheathLength = 2; // Default sheath removal length in cm
+// int rotationsPerCm = 2; // Number of IR sensor triggers per cm of wire
+
+// void setup() {
+//   // Initialize serial communication
+//   Serial.begin(9600);
+//   Serial.println("Wire Prepping Machine Initializing...");
+
+//   // Initialize limit switch
+//   limitSwitch.setDebounceTime(50); // Debounce time for stable input
+
+//   // Initialize IR sensor pin
+//   pinMode(IR_SENSOR_PIN, INPUT);
+
+//   // Initialize DC motor pins
+//   pinMode(DC_MOTOR_IN1, OUTPUT);
+//   pinMode(DC_MOTOR_IN2, OUTPUT);
+//   pinMode(DC_MOTOR_ENA, OUTPUT);
+
+//   // Initialize error LED
+//   pinMode(ERROR_LED, OUTPUT);
+//   // pinMode(ERROR_CONTACT_PIN, OUTPUT); // Dry contact for external error reporting
+
+//   // Attach servo motors
+//   servoSheath.attach(SERVO_SHEATH);
+//   servoSolder.attach(SERVO_SOLDER);
+//   servoCutter.attach(SERVO_CUTTER); // Attach new cutter servo
+
+//   // Initialize components
+//   stopDCMotor();
+//   servoSheath.write(0);  // Set initial position for sheathing removal servo
+//   servoSolder.write(0);  // Set initial position for soldering servo
+//   servoCutter.write(0);  // Set initial position for cutter servo
+
+//   Serial.println("Setup Complete. Ready to Operate.");
+// }
+
+// void loop() {
+//   // Update limit switch state
+//   limitSwitch.loop();
+
+//   // Check wire presence
+//   wirePresent = limitSwitch.getState() == LOW;
+
+//   // Display status on virtual terminal
+//   displayStatus();
+
+//   // Handle errors
+//   if (!wirePresent) {
+//     handleError("Wire not detected! System halted.");
+//     return;
+//   } else {
+//     clearError();
+//   }
+
+//   // Process wire preparation task if no errors and not already running
+//   if (!taskRunning) {
+//     taskRunning = true;
+
+//     if (checkWirePresence()) {  // Check wire presence before feeding wire
+//       feedWire(wireLength);    // Feed wire for 10 cm
+//     }
+
+//     if (checkWirePresence()) {  // Check wire presence before cutting
+//       cutWire();                // Cut the wire after feeding
+//     }
+
+//     if (checkWirePresence()) {  // Check wire presence before removing sheath
+//       removeSheath(sheathLength);
+//     }
+
+//     if (checkWirePresence()) {  // Check wire presence before stripping/tinning cores
+//       stripAndTinCores();
+//     }
+
+//     taskRunning = false;
+//   }
+
+//   // Pause briefly before next iteration
+//   delay(1000);
+// }
+
+// bool checkWirePresence() {
+//   limitSwitch.loop();
+//   wirePresent = limitSwitch.getState() == LOW;
+//   if (!wirePresent) {
+//     handleError("Wire lost during operation. Halting.");
+//     return false;
+//   }
+//   return true;
+// }
+
+// void feedWire(int length) {
+//   Serial.print("Feeding wire: ");
+//   Serial.print(length);
+//   Serial.println(" cm...");
+
+//   rotationCount = 0; // Reset rotation count
+//   analogWrite(DC_MOTOR_ENA, 200); // Set motor speed
+//   digitalWrite(DC_MOTOR_IN1, HIGH);
+//   digitalWrite(DC_MOTOR_IN2, LOW);
+
+//   while (rotationCount < length * rotationsPerCm) {
+//     if (digitalRead(IR_SENSOR_PIN) == HIGH) {
+//       rotationCount++;
+//       delay(50); // Debounce delay for IR sensor
+//     }
+//   }
+
+//   stopDCMotor();
+//   Serial.println("Wire feeding complete.");
+// }
+
+// void cutWire() {
+//   Serial.println("Cutting the wire...");
+//   servoCutter.write(90);  // Move cutter servo to cut position
+//   delay(1000);            // Simulate cutting time
+//   servoCutter.write(0);   // Return servo to initial position
+//   Serial.println("Wire cutting complete.");
+// }
+
+// void removeSheath(int length) {
+//   Serial.print("Removing sheath: ");
+//   Serial.print(length);
+//   Serial.println(" cm...");
+//   servoSheath.write(90); // Move servo to remove sheath
+//   delay(length * 500);   // Simulate sheathing removal
+//   servoSheath.write(0);  // Return servo to initial position
+//   Serial.println("Sheath removal complete.");
+// }
+
+// void stripAndTinCores() {
+//   Serial.println("Stripping and tinning cores...");
+//   servoSolder.write(90); // Move servo to tin cores
+//   delay(2000);           // Simulate soldering process
+//   servoSolder.write(0);  // Return servo to initial position
+//   Serial.println("Stripping and tinning complete.");
+// }
+
+// void stopDCMotor() {
+//   digitalWrite(DC_MOTOR_IN1, LOW);
+//   digitalWrite(DC_MOTOR_IN2, LOW);
+//   analogWrite(DC_MOTOR_ENA, 0);
+// }
+
+// void displayStatus() {
+//   Serial.println("=======================");
+//   Serial.print("Wire Presence: ");
+//   Serial.println(wirePresent ? "Detected" : "Not Detected");
+//   Serial.print("Rotation Count: ");
+//   Serial.println(rotationCount);
+//   Serial.print("Error Status: ");
+//   Serial.println(errorFlag ? "ERROR" : "No Errors");
+//   Serial.println("=======================");
+// }
+
+// void handleError(const char* errorMessage) {
+//   errorFlag = true;
+//   digitalWrite(ERROR_LED, HIGH);
+//   // digitalWrite(ERROR_CONTACT_PIN, HIGH); // Indicate error via dry contact
+//   stopDCMotor();
+//   Serial.print("ERROR: ");
+//   Serial.println(errorMessage);
+//   delay(1000);
+// }
+
+// void clearError() {
+//   errorFlag = false;
+//   digitalWrite(ERROR_LED, LOW);
+//   // digitalWrite(ERROR_CONTACT_PIN, LOW); // Clear error on dry contact
+// }
+
+
+
+
+// ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+
+
+// #include <Servo.h>
+// #include <ezButton.h>
+
+// // Define pins for peripherals
+// #define LIMIT_SWITCH_PIN 5   // Limit switch to detect wire runout
+// #define IR_SENSOR_PIN 9      // IR sensor for rotation count
+// #define DC_MOTOR_IN1 7       // DC motor IN1
+// #define DC_MOTOR_IN2 6       // DC motor IN2
+// #define DC_MOTOR_ENA 4       // DC motor enable (PWM control)
+// #define SERVO_SHEATH 3       // Servo for sheathing removal
+// #define SERVO_SOLDER 2       // Servo for soldering
+// #define SERVO_CUTTER 8       // Servo for wire cutting
+// #define ERROR_LED 0          // LED for error indication
+// #define ERROR_CONTACT_PIN 10 // Optional dry contact for external error reporting
+
+// // Servo objects
+// Servo servoSheath;
+// Servo servoSolder;
+// Servo servoCutter;
+
+// // Button object for the limit switch
+// ezButton limitSwitch(LIMIT_SWITCH_PIN);
+
+// // Variables for system state
+// volatile int rotationCount = 0;  // Count of rotations detected by the IR sensor
+// bool wirePresent = false;        // Wire presence status
+// bool errorFlag = false;          // System error state
+// bool taskRunning = false;        // Task in progress
+
+// // Configurable parameters
+// int wireLength = 10;          // Wire length in cm (can be adjusted via web/serial input)
+// int sheathLength = 2;         // Sheathing removal length in cm
+// int rotationsPerCm = 2;       // IR sensor rotations per cm of wire
+
+// void setup() {
+//   // Initialize Serial communication
+//   Serial.begin(9600);
+//   Serial.println("Wire Preparation Machine Initializing...");
+
+//   // Limit switch debounce setup
+//   limitSwitch.setDebounceTime(50);
+
+//   // Initialize IR sensor pin
+//   pinMode(IR_SENSOR_PIN, INPUT);
+
+//   // Initialize DC motor pins
+//   pinMode(DC_MOTOR_IN1, OUTPUT);
+//   pinMode(DC_MOTOR_IN2, OUTPUT);
+//   pinMode(DC_MOTOR_ENA, OUTPUT);
+
+//   // Initialize error LED
+//   pinMode(ERROR_LED, OUTPUT);
+//   pinMode(ERROR_CONTACT_PIN, OUTPUT); // Optional dry contact for error
+
+//   // Attach servo motors
+//   servoSheath.attach(SERVO_SHEATH);
+//   servoSolder.attach(SERVO_SOLDER);
+//   servoCutter.attach(SERVO_CUTTER);
+
+//   // Reset components
+//   stopDCMotor();
+//   servoSheath.write(0);
+//   servoSolder.write(0);
+//   servoCutter.write(0);
+
+//   Serial.println("Setup Complete. Ready for Operation.");
+// }
+
+// void loop() {
+//   // Update limit switch state
+//   limitSwitch.loop();
+
+//   // Check for wire presence
+//   wirePresent = limitSwitch.getState() == LOW;
+
+//   // Display status on Serial Monitor
+//   displayStatus();
+
+//   // Handle errors if wire is not detected
+//   if (!wirePresent) {
+//     handleError("Wire not detected. System halted.");
+//     return;
+//   } else {
+//     clearError();
+//   }
+
+//   // If no errors and not already running, start task
+//   if (!taskRunning) {
+//     taskRunning = true;
+
+//     // Execute the steps in sequence
+//     if (checkWirePresence()) feedWire(wireLength);
+//     if (checkWirePresence()) cutWire();
+//     if (checkWirePresence()) removeSheath(sheathLength);
+//     if (checkWirePresence()) stripAndTinCores();
+
+//     taskRunning = false; // Mark task complete
+//   }
+
+//   // Pause briefly before next iteration
+//   delay(1000);
+// }
+
+// // Check wire presence during operation
+// bool checkWirePresence() {
+//   limitSwitch.loop();
+//   wirePresent = limitSwitch.getState() == LOW;
+//   if (!wirePresent) {
+//     handleError("Wire lost during operation. Halting.");
+//     return false;
+//   }
+//   return true;
+// }
+
+// // Feed wire by rotating the motor
+// void feedWire(int length) {
+//   Serial.print("Feeding wire: ");
+//   Serial.print(length);
+//   Serial.println(" cm...");
+
+//   rotationCount = 0; // Reset rotation count
+//   analogWrite(DC_MOTOR_ENA, 200); // Set motor speed
+//   digitalWrite(DC_MOTOR_IN1, HIGH);
+//   digitalWrite(DC_MOTOR_IN2, LOW);
+
+//   while (rotationCount < length * rotationsPerCm) {
+//     if (digitalRead(IR_SENSOR_PIN) == HIGH) {
+//       rotationCount++;
+//       delay(50); // Debounce delay
+//     }
+//   }
+
+//   stopDCMotor();
+//   Serial.println("Wire feeding complete.");
+// }
+
+// // Cut wire using servo
+// void cutWire() {
+//   Serial.println("Cutting the wire...");
+//   servoCutter.write(90); // Move cutter servo to cutting position
+//   delay(1000);           // Simulate cutting time
+//   servoCutter.write(0);  // Return servo to initial position
+//   Serial.println("Wire cutting complete.");
+// }
+
+// // Remove sheath using servo
+// void removeSheath(int length) {
+//   Serial.print("Removing sheath: ");
+//   Serial.print(length);
+//   Serial.println(" cm...");
+//   servoSheath.write(90); // Move servo to sheathing removal position
+//   delay(length * 500);   // Simulate removal time
+//   servoSheath.write(0);  // Return to initial position
+//   Serial.println("Sheath removal complete.");
+// }
+
+// // Strip and tin cores using soldering servo
+// void stripAndTinCores() {
+//   Serial.println("Stripping and tinning cores...");
+//   servoSolder.write(90); // Move soldering servo to position
+//   delay(2000);           // Simulate tinning process
+//   servoSolder.write(0);  // Return to initial position
+//   Serial.println("Stripping and tinning complete.");
+// }
+
+// // Stop the DC motor
+// void stopDCMotor() {
+//   digitalWrite(DC_MOTOR_IN1, LOW);
+//   digitalWrite(DC_MOTOR_IN2, LOW);
+//   analogWrite(DC_MOTOR_ENA, 0);
+// }
+
+// // Display current status on Serial Monitor
+// void displayStatus() {
+//   Serial.println("=======================");
+//   Serial.print("Wire Presence: ");
+//   Serial.println(wirePresent ? "Detected" : "Not Detected");
+//   Serial.print("Rotation Count: ");
+//   Serial.println(rotationCount);
+//   Serial.print("Error Status: ");
+//   Serial.println(errorFlag ? "ERROR" : "No Errors");
+//   Serial.println("=======================");
+// }
+
+// // Handle errors and halt operation
+// void handleError(const char* errorMessage) {
+//   errorFlag = true;
+//   digitalWrite(ERROR_LED, HIGH);
+//   digitalWrite(ERROR_CONTACT_PIN, HIGH); // Indicate error via dry contact
+//   stopDCMotor();
+//   Serial.print("ERROR: ");
+//   Serial.println(errorMessage);
+//   delay(1000); // Wait before retry
+// }
+
+// // Clear error state
+// void clearError() {
+//   errorFlag = false;
+//   digitalWrite(ERROR_LED, LOW);
+//   digitalWrite(ERROR_CONTACT_PIN, LOW); // Reset dry contact
+// }

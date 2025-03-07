@@ -1,0 +1,9 @@
+one thing shall be added to it further more....
+
+one more servo motor should be used here for wire cutting purposes...
+
+
+so the machine will work in such a way that it will first detect the wire through limit switch and then the dc motor will feed the wire forward where the ir sensor will also be attached to it it will measure the wire length ie 10 cm wire.... (so when the ir sensor will counts the dc motor rotation/shift, let suppose one rotation is equal to 5cm... so when one rotation of dc motor completes, it means 5 cm wire has been feeded forward).... 
+ so when the 10 cm wire feeds forward so a servo motor which will be attached to a cutter, will cut the wire and then the wire will goes further for another servo motor for Sheathing removal and Core Stripping
+
+ 
